@@ -439,10 +439,17 @@
     var totalStampCount = 0;
     state.boards.forEach(function (b) { totalStampCount += b.stamps.length; });
 
+    // 중복 관람 횟수별 좌석 색상 (1회 → 3회 이상 순으로 진해짐)
+    function tierBg(count) {
+      if (count >= 3) return { grad: 'linear-gradient(155deg,#a85a26,#7a1f10)', glow: '0 0 6px 1px rgba(170,60,20,.45)' };
+      if (count === 2) return { grad: 'linear-gradient(155deg,#e08a44,#b8301d)', glow: '0 0 6px 1px rgba(215,85,35,.5)' };
+      return { grad: 'linear-gradient(155deg,#ffb163,#e5442c)', glow: '0 0 7px 1px rgba(255,120,45,.6)' };
+    }
     function seatTile(c) {
       if (c.isSpacer) return '<div style="width:15px; height:15px; flex:0 0 auto;"></div>';
       if (c.logged) {
-        return '<div data-action="seatTap" data-code="' + esc(c.code) + '" data-count="' + c.count + '" style="width:15px; height:15px; flex:0 0 auto; display:flex; align-items:center; justify-content:center; font-size:8px; font-weight:800; color:#2a0d06; border-radius:3px; background:linear-gradient(155deg,#ffb163,#e5442c); box-shadow:0 0 7px 1px rgba(255,120,45,.6); cursor:pointer;">' + esc(c.num) + '</div>';
+        var t = tierBg(c.count);
+        return '<div data-action="seatTap" data-code="' + esc(c.code) + '" data-count="' + c.count + '" style="width:15px; height:15px; flex:0 0 auto; display:flex; align-items:center; justify-content:center; font-size:8px; font-weight:800; color:#2a0d06; border-radius:3px; background:' + t.grad + '; box-shadow:' + t.glow + '; cursor:pointer;">' + esc(c.num) + '</div>';
       }
       return '<div data-action="seatTap" data-code="' + esc(c.code) + '" data-count="' + c.count + '" style="width:15px; height:15px; flex:0 0 auto; display:flex; align-items:center; justify-content:center; font-size:8px; font-weight:600; color:rgba(232,205,190,.42); border-radius:3px; background:rgba(78,38,32,.5); border:1px solid rgba(150,70,55,.32); cursor:pointer;">' + esc(c.num) + '</div>';
     }
@@ -493,9 +500,11 @@
       '<div style="overflow-x:auto; padding:0 4px;">' +
       '<div style="display:flex; flex-direction:column; gap:2px; min-width:min-content;">' + seatRowsHtml + '</div>' +
       '</div>' +
-      '<div style="display:flex; justify-content:center; gap:16px; margin-top:15px; font-size:10px; color:rgba(232,205,190,.55);">' +
-      '<span style="display:flex; align-items:center; gap:6px;"><span style="width:12px; height:12px; border-radius:3px; background:linear-gradient(155deg,#ffb163,#e5442c); box-shadow:0 0 6px rgba(255,120,45,.6);"></span>내 관람 좌석</span>' +
-      '<span style="display:flex; align-items:center; gap:6px;"><span style="width:12px; height:12px; border-radius:3px; background:rgba(78,38,32,.5); border:1px solid rgba(150,70,55,.32);"></span>미기록</span>' +
+      '<div style="display:flex; justify-content:center; gap:11px; margin-top:15px; font-size:10px; color:rgba(232,205,190,.55);">' +
+      '<span style="display:flex; align-items:center; gap:5px;"><span style="width:12px; height:12px; border-radius:3px; background:' + tierBg(1).grad + '; box-shadow:' + tierBg(1).glow + ';"></span>1회</span>' +
+      '<span style="display:flex; align-items:center; gap:5px;"><span style="width:12px; height:12px; border-radius:3px; background:' + tierBg(2).grad + '; box-shadow:' + tierBg(2).glow + ';"></span>2회</span>' +
+      '<span style="display:flex; align-items:center; gap:5px;"><span style="width:12px; height:12px; border-radius:3px; background:' + tierBg(3).grad + '; box-shadow:' + tierBg(3).glow + ';"></span>3회</span>' +
+      '<span style="display:flex; align-items:center; gap:5px;"><span style="width:12px; height:12px; border-radius:3px; background:rgba(78,38,32,.5); border:1px solid rgba(150,70,55,.32);"></span>미기록</span>' +
       '</div>' +
       '</div>' +
       '<div>' +
