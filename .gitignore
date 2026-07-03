@@ -11,3 +11,7 @@ Thumbs.db
 # editor
 .vscode/
 .idea/
+
+# internal docs (not for public deploy)
+사칠_관람트래커_PRD.md
+변경사항 정산 및 출동기록.zip
