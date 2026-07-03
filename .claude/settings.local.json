@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(mkdir -p \"C:\\\\main\\\\lucy1\\\\.claude\")",
+      "Bash(echo \"=== scratchpad ===\" && ls -la \"C:/Users/hin77/AppData/Local/Temp/claude/C--main-lucy1/5ea29aac-f096-4363-b853-a47e124fed12/scratchpad\" 2>/dev/null; echo \"=== temp claude imgs ===\" && find \"C:/Users/hin77/AppData/Local/Temp/claude\" -maxdepth 4 \\\\\\( -iname \"*.png\" -o -iname \"*.jpg\" -o -iname \"*.jpeg\" -o -iname \"*.webp\" \\\\\\) 2>/dev/null | head -20)",
+      "Bash(gh auth *)",
+      "Bash(npm -v)",
+      "Bash(git --version)",
+      "Bash(git config *)",
+      "Bash(vercel --version)",
+      "Bash(npx vercel *)",
+      "Bash(gh --version)"
+    ]
+  }
+}

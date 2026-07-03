@@ -1,0 +1,13 @@
+# dependencies
+node_modules/
+
+# vercel
+.vercel/
+
+# os
+.DS_Store
+Thumbs.db
+
+# editor
+.vscode/
+.idea/
