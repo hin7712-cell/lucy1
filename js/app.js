@@ -254,9 +254,9 @@
     return '' +
       '<header style="position:relative; z-index:1; padding:26px 22px 16px; text-align:center;">' +
       '  <div style="font-family:\'Cinzel\',serif; font-size:10px; letter-spacing:6px; color:rgba(232,205,190,.55); font-weight:500;">MUSICAL</div>' +
-      '  <div style="display:flex; align-items:flex-end; justify-content:center; gap:3px; margin-top:2px; font-family:\'Nanum Myeongjo\',serif; line-height:1; color:#ecdfce;">' +
-      '    <span style="font-size:40px; font-weight:400; letter-spacing:-1px;">사</span>' +
-      '    <span style="font-size:52px; font-weight:800; position:relative; top:2px; letter-spacing:-2px;">칠</span>' +
+      '  <div style="position:relative; display:inline-flex; align-items:flex-start; justify-content:center; gap:14px; margin-top:8px; margin-bottom:24px; font-family:\'Gothic A1\',sans-serif; font-weight:100; line-height:1; color:#ad9788;">' +
+      '    <span style="font-size:52px;">사</span>' +
+      '    <span style="font-size:64px; position:relative; top:24px;">칠</span>' +
       '  </div>' +
       '  <div style="margin-top:12px; display:flex; flex-direction:column; gap:2px; font-size:11.5px; color:rgba(232,205,190,.62); letter-spacing:.2px;">' +
       '    <span>' + esc(SHOW.period) + '</span>' +
