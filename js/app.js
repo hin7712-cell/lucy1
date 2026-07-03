@@ -12,13 +12,33 @@
       { key: 'yijun', name: '강이준', tagline: '누구 잘못도 아니야', cast: ['임태현', '박정혁', '김재한'] }
     ],
     performances: [
-      { date: '08.04', dow: '화', time: '20:00', jungwon: '황민수', yijun: '임태현', badge: '첫공' },
-      { date: '08.05', dow: '수', time: '20:00', jungwon: '선한국', yijun: '박정혁' },
-      { date: '08.06', dow: '목', time: '20:00', jungwon: '김찬종', yijun: '김재한' },
-      { date: '08.07', dow: '금', time: '20:00', jungwon: '황민수', yijun: '임태현' },
-      { date: '08.08', dow: '토', time: '15:00', jungwon: '선한국', yijun: '박정혁' },
-      { date: '08.08', dow: '토', time: '19:00', jungwon: '김찬종', yijun: '김재한' },
-      { date: '08.09', dow: '일', time: '14:00', jungwon: '황민수', yijun: '임태현' }
+      { date: '08.04', dow: '화', time: '20:00', jungwon: '김찬종', yijun: '박정혁', badge: '첫공' },
+      { date: '08.05', dow: '수', time: '20:00', jungwon: '선한국', yijun: '김재한', badge: '첫공' },
+      { date: '08.06', dow: '목', time: '20:00', jungwon: '황민수', yijun: '임태현', badge: '첫공' },
+      { date: '08.07', dow: '금', time: '20:00', jungwon: '선한국', yijun: '박정혁' },
+      { date: '08.08', dow: '토', time: '15:00', jungwon: '김찬종', yijun: '김재한' },
+      { date: '08.08', dow: '토', time: '19:00', jungwon: '선한국', yijun: '김재한' },
+      { date: '08.09', dow: '일', time: '14:00', jungwon: '황민수', yijun: '박정혁' },
+      { date: '08.09', dow: '일', time: '18:00', jungwon: '김찬종', yijun: '임태현' },
+      { date: '08.11', dow: '화', time: '20:00', jungwon: '선한국', yijun: '임태현' },
+      { date: '08.12', dow: '수', time: '16:00', jungwon: '김찬종', yijun: '박정혁' },
+      { date: '08.12', dow: '수', time: '20:00', jungwon: '황민수', yijun: '김재한' },
+      { date: '08.13', dow: '목', time: '20:00', jungwon: '선한국', yijun: '임태현' },
+      { date: '08.14', dow: '금', time: '20:00', jungwon: '황민수', yijun: '김재한' },
+      { date: '08.15', dow: '토', time: '15:00', jungwon: '선한국', yijun: '임태현' },
+      { date: '08.15', dow: '토', time: '19:00', jungwon: '김찬종', yijun: '김재한' },
+      { date: '08.16', dow: '일', time: '14:00', jungwon: '황민수', yijun: '박정혁' },
+      { date: '08.16', dow: '일', time: '18:00', jungwon: '김찬종', yijun: '박정혁' },
+      { date: '08.17', dow: '월', time: '14:00', jungwon: '선한국', yijun: '임태현' },
+      { date: '08.17', dow: '월', time: '18:00', jungwon: '황민수', yijun: '김재한' },
+      { date: '08.19', dow: '수', time: '16:00', jungwon: '황민수', yijun: '박정혁' },
+      { date: '08.19', dow: '수', time: '20:00', jungwon: '김찬종', yijun: '박정혁' },
+      { date: '08.20', dow: '목', time: '20:00', jungwon: '김찬종', yijun: '임태현' },
+      { date: '08.21', dow: '금', time: '20:00', jungwon: '선한국', yijun: '김재한' },
+      { date: '08.22', dow: '토', time: '15:00', jungwon: '김찬종', yijun: '임태현' },
+      { date: '08.22', dow: '토', time: '19:00', jungwon: '선한국', yijun: '박정혁' },
+      { date: '08.23', dow: '일', time: '14:00', jungwon: '황민수', yijun: '김재한' },
+      { date: '08.23', dow: '일', time: '18:00', jungwon: '황민수', yijun: '임태현' }
     ],
     tiers: [
       { count: 5, name: '지정 폴라로이드 1매', desc: '원하는 배우 지정 후 수령' },
@@ -98,12 +118,15 @@
     if (val) { s[id] = val; w[id] = true; } else { delete s[id]; }
     update({ seats: s, watched: w });
   }
-  function setActor(name) { update({ activeActor: state.activeActor === name ? null : name }); }
+  function setActor(name) {
+    var p = state.activeActor === name ? null : name;
+    update({ activeActor: p, pinnedActor: p });
+  }
   function togglePin(name) {
     var p = state.pinnedActor === name ? null : name;
-    update({ pinnedActor: p, activeActor: p || state.activeActor });
+    update({ pinnedActor: p, activeActor: p });
   }
-  function clearFilter() { update({ activeActor: null }); }
+  function clearFilter() { update({ activeActor: null, pinnedActor: null }); }
   function setTab(t) { setState({ tab: t }); }
 
   function copySeat(code) {
@@ -254,10 +277,7 @@
     return '' +
       '<header style="position:relative; z-index:1; padding:26px 22px 16px; text-align:center;">' +
       '  <div style="font-family:\'Cinzel\',serif; font-size:10px; letter-spacing:6px; color:rgba(232,205,190,.55); font-weight:500;">MUSICAL</div>' +
-      '  <div style="position:relative; display:inline-flex; align-items:flex-start; justify-content:center; gap:14px; margin-top:8px; margin-bottom:24px; font-family:\'Gothic A1\',sans-serif; font-weight:100; line-height:1; color:#ad9788;">' +
-      '    <span style="font-size:52px;">사</span>' +
-      '    <span style="font-size:64px; position:relative; top:24px;">칠</span>' +
-      '  </div>' +
+      '  <img src="img/name.png" alt="사칠" style="display:block; margin:8px auto 6px; width:auto; max-width:45%; height:auto;" />' +
       '  <div style="margin-top:12px; display:flex; flex-direction:column; gap:2px; font-size:11.5px; color:rgba(232,205,190,.62); letter-spacing:.2px;">' +
       '    <span>' + esc(SHOW.period) + '</span>' +
       '    <span>' + esc(SHOW.venue) + '</span>' +
@@ -328,7 +348,9 @@
       '<button data-action="clearFilter" style="align-self:flex-start; font-size:11px; color:rgba(255,170,120,.85); background:none; border:none; cursor:pointer; padding:0 4px;">✕ 필터 해제 · ' + esc(active) + '</button>'
       : '';
 
+    var pinned = state.pinnedActor;
     var perfCards = SHOW.performances.map(function (p) {
+      if (pinned && p.jungwon !== pinned && p.yijun !== pinned) return '';
       var id = perfId(p);
       var watched = !!state.watched[id];
       var inFilter = !active || p.jungwon === active || p.yijun === active;
