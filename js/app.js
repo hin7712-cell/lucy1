@@ -54,9 +54,7 @@
   }
 
   function defaultBoards() {
-    return [
-      { id: 1, name: '1', stamps: [], claims: {} }
-    ];
+    return [];
   }
 
   function loadState() {
@@ -75,7 +73,8 @@
       currentBoardId: boards[0] ? boards[0].id : null,
       modalOpen: false,
       modalBoardId: null,
-      mfDate: '', mfJungwon: '', mfYijun: '', mfSeat: '',
+      openMenuBoardId: null,
+      mfDate: '', mfActor: '', mfEditIdx: null,
       toast: null
     };
   }
@@ -166,9 +165,10 @@
   function resetData() {
     if (!confirm('모든 관람 기록을 초기화할까요?')) return;
     try { localStorage.removeItem(KEY); } catch (e) {}
-    var boards = [{ id: 1, name: '1', stamps: [], claims: {} }];
+    var boards = [];
     state.watched = {}; state.seats = {}; state.pinnedActor = null; state.activeActor = null;
-    state.boards = boards; state.nextBoardSeq = 2; state.currentBoardId = 1; state.boardView = 'list';
+    state.boards = boards; state.nextBoardSeq = 1; state.currentBoardId = null; state.boardView = 'list';
+    state.openMenuBoardId = null;
     persist();
     render();
     showToast('초기화했어요');
@@ -225,28 +225,60 @@
     update({ boards: state.boards.concat([board]), nextBoardSeq: id + 1 });
     showToast('새 도장판을 추가했어요');
   }
-  function openBoard(id) { setState({ currentBoardId: id, boardView: 'detail' }); }
+  function openBoard(id) { setState({ currentBoardId: id, boardView: 'detail', openMenuBoardId: null }); }
   function closeBoard() { setState({ boardView: 'list' }); }
+  function toggleBoardMenu(id) { setState({ openMenuBoardId: state.openMenuBoardId === id ? null : id }); }
+  function deleteBoard(id) {
+    var boards = state.boards.filter(function (b) { return b.id !== id; });
+    var patch = { boards: boards, openMenuBoardId: null };
+    if (state.currentBoardId === id) { patch.currentBoardId = boards[0] ? boards[0].id : null; patch.boardView = 'list'; }
+    update(patch);
+    showToast('도장판을 삭제했어요');
+  }
 
   function openStampModal(boardId) {
     var board = findBoard(boardId);
     if (!board || board.stamps.length >= STAMP_GOAL) return;
-    setState({ modalOpen: true, modalBoardId: boardId, mfDate: '', mfJungwon: '', mfYijun: '', mfSeat: '' });
+    setState({ modalOpen: true, modalBoardId: boardId, mfDate: '', mfActor: '', mfEditIdx: null });
   }
-  function closeModal() { setState({ modalOpen: false, modalBoardId: null }); }
+  function openStampEdit(boardId, idx, stamp) {
+    setState({ modalOpen: true, modalBoardId: boardId, mfDate: stamp.date || '', mfActor: stamp.actor || '', mfEditIdx: idx });
+  }
+  function closeModal() { setState({ modalOpen: false, modalBoardId: null, mfEditIdx: null }); }
+  function selectStampActor(name) { setState({ mfActor: state.mfActor === name ? '' : name }); }
 
   function submitStamp() {
     if (!state.mfDate || !state.mfDate.trim()) { showToast('관람일을 입력해주세요'); return; }
+    if (!state.mfActor) { showToast('적립 도장 이미지를 선택해주세요'); return; }
+    var editIdx = state.mfEditIdx;
+    var newStamp = { date: state.mfDate.trim(), actor: state.mfActor };
     var boards = state.boards.map(function (b) {
       if (b.id !== state.modalBoardId) return b;
-      return Object.assign({}, b, { stamps: b.stamps.concat([{ date: state.mfDate.trim(), jungwon: state.mfJungwon.trim(), yijun: state.mfYijun.trim(), seat: state.mfSeat.trim() }]) });
+      var stamps;
+      if (editIdx != null) {
+        stamps = b.stamps.map(function (s, i) { return i === editIdx ? newStamp : s; });
+      } else {
+        stamps = b.stamps.concat([newStamp]);
+      }
+      return Object.assign({}, b, { stamps: stamps });
     });
-    update({ boards: boards, modalOpen: false, modalBoardId: null });
-    showToast('도장을 적립했어요');
+    update({ boards: boards, modalOpen: false, modalBoardId: null, mfEditIdx: null });
+    showToast(editIdx != null ? '도장을 수정했어요' : '도장을 적립했어요');
+  }
+
+  function deleteStamp() {
+    var editIdx = state.mfEditIdx;
+    if (editIdx == null) return;
+    var boards = state.boards.map(function (b) {
+      if (b.id !== state.modalBoardId) return b;
+      return Object.assign({}, b, { stamps: b.stamps.filter(function (s, i) { return i !== editIdx; }) });
+    });
+    update({ boards: boards, modalOpen: false, modalBoardId: null, mfEditIdx: null });
+    showToast('도장을 삭제했어요');
   }
 
   function tapStamp(boardId, idx, stamp) {
-    if (stamp) { showToast(stamp.date + (stamp.jungwon ? ' · ' + stamp.jungwon : '') + (stamp.yijun ? ' / ' + stamp.yijun : '')); return; }
+    if (stamp) { openStampEdit(boardId, idx, stamp); return; }
     var board = findBoard(boardId);
     if (board && idx === board.stamps.length) openStampModal(boardId);
   }
@@ -520,16 +552,23 @@
   }
 
   function renderBoardList() {
-    var boardCardsHtml = state.boards.map(function (b) {
+    var boardCardsHtml = state.boards.map(function (b, idx) {
       var count = b.stamps.length;
       var stat = boardStatus(b);
       var pct = Math.min(100, Math.round(count / STAMP_GOAL * 100));
-      return '<button data-action="openBoard" data-id="' + b.id + '" style="text-align:left; display:flex; gap:13px; padding:14px; border-radius:15px; background:rgba(24,13,9,.6); border:1px solid rgba(255,120,60,.14); cursor:pointer; width:100%;">' +
+      var boardNo = idx + 1;
+      var menuOpen = state.openMenuBoardId === b.id;
+      var menuHtml = '<button data-action="toggleBoardMenu" data-id="' + b.id + '" aria-label="도장판 메뉴" style="position:absolute; top:8px; right:8px; width:28px; height:28px; display:flex; align-items:center; justify-content:center; border-radius:8px; border:none; background:rgba(255,255,255,.05); color:#f0e4d4; font-size:16px; line-height:1; cursor:pointer; z-index:2;">⋮</button>' +
+        (menuOpen ? '<div style="position:absolute; top:40px; right:8px; z-index:3; background:#20120c; border:1px solid rgba(255,120,60,.28); border-radius:11px; overflow:hidden; box-shadow:0 8px 22px rgba(0,0,0,.55);">' +
+          '<button data-action="deleteBoard" data-id="' + b.id + '" style="display:flex; align-items:center; gap:7px; padding:11px 18px 11px 14px; border:none; background:none; color:#ff9a7a; font-size:12.5px; font-weight:700; cursor:pointer; white-space:nowrap;">🗑 삭제</button>' +
+          '</div>' : '');
+      return '<div data-action="openBoard" data-id="' + b.id + '" style="position:relative; text-align:left; display:flex; gap:13px; padding:14px; border-radius:15px; background:rgba(24,13,9,.6); border:1px solid rgba(255,120,60,.14); cursor:pointer; width:100%;">' +
+        menuHtml +
         '<img src="img/poster.jpg" alt="사칠" style="flex:0 0 auto; width:54px; height:74px; border-radius:9px; object-fit:cover; border:1px solid rgba(255,120,60,.2); background:#180d09;" />' +
         '<div style="flex:1; min-width:0;">' +
-        '<div style="font-size:16px; font-weight:800; color:#f4e8d8;">' + esc(b.name) + '</div>' +
+        '<div style="font-size:16px; font-weight:800; color:#f4e8d8;">' + boardNo + '</div>' +
         '<div style="font-size:10.5px; color:rgba(232,205,190,.55); margin-top:2px;">사칠 · ' + esc(SHOW.period) + '</div>' +
-        '<div style="display:flex; align-items:center; gap:8px; margin-top:9px;">' +
+        '<div style="display:flex; align-items:center; gap:8px; margin-top:9px; padding-right:30px;">' +
         '<span style="font-size:14px; font-weight:800; color:#ffb877; flex:0 0 auto;">🎫 ' + count + '<span style="font-size:11px; color:rgba(232,205,190,.4);">/' + STAMP_GOAL + '</span></span>' +
         '<div style="flex:1; height:7px; border-radius:4px; background:rgba(255,255,255,.06); overflow:hidden;">' +
         '<div style="height:100%; width:' + pct + '%; border-radius:4px; background:linear-gradient(90deg,#ff8a3d,#e5442c);"></div>' +
@@ -537,8 +576,11 @@
         '</div>' +
         '<div style="font-size:10.5px; font-weight:700; margin-top:8px; color:' + stat.color + ';">' + stat.icon + ' ' + stat.status + '</div>' +
         '</div>' +
-        '</button>';
+        '</div>';
     }).join('');
+    var listBody = state.boards.length
+      ? '<div style="display:flex; flex-direction:column; gap:11px;">' + boardCardsHtml + '</div>'
+      : '<div style="text-align:center; padding:40px 18px; border-radius:15px; border:1px dashed rgba(255,120,60,.28); background:rgba(255,255,255,.02); color:rgba(232,205,190,.55); font-size:12.5px; line-height:1.75;">아직 만든 도장판이 없어요.<br/>상단 <b style="color:#ffcaa0;">＋ 도장판 추가</b>를 눌러 첫 도장판을 만들어보세요.</div>';
 
     return '<div style="display:flex; align-items:center; justify-content:space-between; margin:2px 4px 14px;">' +
       '<h2 style="margin:0; font-size:19px; font-weight:800; color:#f2e6d6; letter-spacing:-.3px;">내 출동 기록 카드</h2>' +
@@ -548,12 +590,13 @@
       '<div style="flex:0 0 auto; font-size:12px; color:rgba(255,175,120,.8);">ⓘ</div>' +
       '<p style="margin:0; font-size:10.5px; line-height:1.6; color:rgba(232,205,190,.6);">이 도장판은 실제 혜택 적립·수령 처리가 아니며, 적립 기록과 혜택 진행 상황을 직접 관리하기 위한 기능이에요.</p>' +
       '</div>' +
-      '<div style="display:flex; flex-direction:column; gap:11px;">' + boardCardsHtml + '</div>';
+      listBody;
   }
 
   function renderBoardDetail() {
     var board = findBoard(state.currentBoardId) || state.boards[0];
     if (!board) return '';
+    var boardNo = state.boards.indexOf(board) + 1;
     var count = board.stamps.length;
     var stat = boardStatus(board);
     var pct = Math.min(100, Math.round(count / STAMP_GOAL * 100));
@@ -566,11 +609,13 @@
       var gift = SHOW.tiers.some(function (t) { return t.count === pos; });
       var giftBadge = gift ? '<div style="position:absolute; top:-6px; right:-4px; z-index:2; font-size:13px;">🎁</div>' : '';
       if (stamp) {
+        var stampInner = stamp.actor
+          ? '<div style="width:60px; height:60px; border-radius:50%; overflow:hidden; border:2px solid #ffab5e; box-shadow:0 0 12px rgba(255,110,40,.45);"><img src="img/' + encodeURIComponent(stamp.actor) + '.jpg" alt="' + esc(stamp.actor) + '" style="width:100%; height:100%; object-fit:cover; display:block;" /></div>'
+          : '<div style="width:60px; height:60px; border-radius:50%; background:radial-gradient(circle at 35% 30%, #ffc98a, #e5442c 70%, #a8261a); box-shadow:0 0 12px rgba(255,110,40,.45), inset 0 0 8px rgba(120,20,8,.5); display:flex; align-items:center; justify-content:center;">' +
+            '<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#3a0f06" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3c1.5 3-1.5 4.5 0 7.5C13.5 13.5 17 12 17 15.5A5 5 0 0 1 7 15.5c0-2 1-3 1.6-4.4C9.4 9 8 7 12 3z"/></svg>' +
+            '</div>';
         stampsHtml += '<div data-action="tapStamp" data-board-id="' + board.id + '" data-idx="' + i + '" style="display:flex; flex-direction:column; align-items:center; gap:6px; cursor:pointer;">' +
-          '<div style="position:relative; width:60px; height:60px;">' + giftBadge +
-          '<div style="width:60px; height:60px; border-radius:50%; background:radial-gradient(circle at 35% 30%, #ffc98a, #e5442c 70%, #a8261a); box-shadow:0 0 12px rgba(255,110,40,.45), inset 0 0 8px rgba(120,20,8,.5); display:flex; align-items:center; justify-content:center;">' +
-          '<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#3a0f06" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3c1.5 3-1.5 4.5 0 7.5C13.5 13.5 17 12 17 15.5A5 5 0 0 1 7 15.5c0-2 1-3 1.6-4.4C9.4 9 8 7 12 3z"/></svg>' +
-          '</div></div>' +
+          '<div style="position:relative; width:60px; height:60px;">' + giftBadge + stampInner + '</div>' +
           '<span style="font-size:10px; font-weight:600; color:rgba(255,180,130,.9);">' + esc(stamp.date) + '</span>' +
           '</div>';
       } else {
@@ -616,7 +661,7 @@
       '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>' +
       '</button>' +
       '<div>' +
-      '<div style="font-size:16px; font-weight:800; color:#f2e6d6;">출동 기록 카드 ' + esc(board.name) + '</div>' +
+      '<div style="font-size:16px; font-weight:800; color:#f2e6d6;">출동 기록 카드 ' + boardNo + '</div>' +
       '<div style="font-size:10px; color:rgba(232,205,190,.5);">도장을 눌러 관람 회차를 기록하세요</div>' +
       '</div>' +
       '</div>' +
@@ -676,31 +721,34 @@
     return '<div data-action="closeModalBackdrop" style="position:fixed; inset:0; z-index:30; display:flex; align-items:flex-end; justify-content:center; background:rgba(6,3,2,.62); backdrop-filter:blur(3px);">' +
       '<div data-action="stopProp" style="width:100%; max-width:432px; background:linear-gradient(180deg,#1a0e09,#120a07); border:1px solid rgba(255,120,60,.2); border-radius:20px 20px 0 0; padding:18px 18px 24px; box-shadow:0 -8px 30px rgba(0,0,0,.55);">' +
       '<div style="width:40px; height:4px; border-radius:2px; background:rgba(255,150,90,.3); margin:0 auto 16px;"></div>' +
-      '<h3 style="margin:0 0 4px; font-size:16px; font-weight:800; color:#f2e6d6;">회차 정보 입력</h3>' +
-      '<p style="margin:0 0 16px; font-size:11px; color:rgba(232,205,190,.5);">관람한 회차 정보를 입력하면 도장이 적립돼요.</p>' +
+      '<h3 style="margin:0 0 4px; font-size:16px; font-weight:800; color:#f2e6d6;">' + (state.mfEditIdx != null ? '도장 수정' : '회차 정보 입력') + '</h3>' +
+      '<p style="margin:0 0 16px; font-size:11px; color:rgba(232,205,190,.5);">' + (state.mfEditIdx != null ? '관람일과 도장 이미지를 수정할 수 있어요.' : '관람한 회차 정보를 입력하면 도장이 적립돼요.') + '</p>' +
       '<div style="display:flex; flex-direction:column; gap:11px;">' +
       '<div>' +
       '<label style="display:block; font-size:10.5px; color:rgba(255,175,120,.75); font-weight:600; margin-bottom:5px;">관람일</label>' +
       '<input id="mf-date" data-action="mfDate" value="' + esc(state.mfDate) + '" placeholder="예: 08.09" style="width:100%; padding:11px 12px; border-radius:10px; border:1px solid rgba(255,120,60,.2); background:rgba(0,0,0,.3); color:#f2e6d6; font-size:13px; font-weight:600;" />' +
       '</div>' +
-      '<div style="display:flex; gap:9px;">' +
-      '<div style="flex:1; min-width:0;">' +
-      '<label style="display:block; font-size:10.5px; color:rgba(255,175,120,.75); font-weight:600; margin-bottom:5px;">안정원</label>' +
-      '<input id="mf-jungwon" data-action="mfJungwon" value="' + esc(state.mfJungwon) + '" placeholder="배우" style="width:100%; padding:11px 12px; border-radius:10px; border:1px solid rgba(255,120,60,.2); background:rgba(0,0,0,.3); color:#f2e6d6; font-size:13px; font-weight:600;" />' +
-      '</div>' +
-      '<div style="flex:1; min-width:0;">' +
-      '<label style="display:block; font-size:10.5px; color:rgba(255,175,120,.75); font-weight:600; margin-bottom:5px;">강이준</label>' +
-      '<input id="mf-yijun" data-action="mfYijun" value="' + esc(state.mfYijun) + '" placeholder="배우" style="width:100%; padding:11px 12px; border-radius:10px; border:1px solid rgba(255,120,60,.2); background:rgba(0,0,0,.3); color:#f2e6d6; font-size:13px; font-weight:600;" />' +
-      '</div>' +
-      '</div>' +
       '<div>' +
-      '<label style="display:block; font-size:10.5px; color:rgba(255,175,120,.75); font-weight:600; margin-bottom:5px;">좌석 <span style="color:rgba(232,205,190,.35);">(선택)</span></label>' +
-      '<input id="mf-seat" data-action="mfSeat" value="' + esc(state.mfSeat) + '" placeholder="예: F7" style="width:100%; padding:11px 12px; border-radius:10px; border:1px solid rgba(255,120,60,.2); background:rgba(0,0,0,.3); color:#f2e6d6; font-size:13px; font-weight:600;" />' +
+      '<label style="display:block; font-size:10.5px; color:rgba(255,175,120,.75); font-weight:600; margin-bottom:8px;">적립 도장 이미지 선택</label>' +
+      SHOW.roles.map(function (r) {
+        return '<div style="font-size:10px; color:rgba(232,205,190,.5); font-weight:600; margin:2px 2px 6px;">' + esc(r.name) + '</div>' +
+          '<div style="display:flex; gap:8px; margin-bottom:10px;">' +
+          r.cast.map(function (name) {
+            var sel = state.mfActor === name;
+            return '<button data-action="selectStampActor" data-name="' + esc(name) + '" style="flex:1; min-width:0; display:flex; flex-direction:column; align-items:center; gap:5px; padding:8px 4px; border-radius:12px; background:' + (sel ? 'linear-gradient(155deg,rgba(255,140,60,.22),rgba(200,54,20,.26))' : 'rgba(255,255,255,.02)') + '; border:' + (sel ? '1.5px solid #ffab5e' : '1px solid rgba(255,120,60,.16)') + '; cursor:pointer;">' +
+              '<img src="img/' + encodeURIComponent(name) + '.jpg" alt="' + esc(name) + '" style="width:46px; height:46px; border-radius:50%; object-fit:cover; ' + (sel ? '' : 'opacity:.82;') + '" />' +
+              '<span style="font-size:11px; font-weight:700; color:' + (sel ? '#ffdcc0' : 'rgba(240,225,210,.7)') + ';">' + esc(name) + '</span>' +
+              '</button>';
+          }).join('') +
+          '</div>';
+      }).join('') +
       '</div>' +
       '</div>' +
       '<div style="display:flex; gap:9px; margin-top:18px;">' +
-      '<button data-action="closeModal" style="flex:1; padding:13px; border-radius:11px; border:1px solid rgba(255,120,60,.2); background:rgba(255,255,255,.03); color:rgba(240,225,210,.8); font-size:13px; font-weight:700; cursor:pointer;">취소</button>' +
-      '<button data-action="submitStamp" style="flex:2; padding:13px; border-radius:11px; border:none; background:linear-gradient(155deg,#ff7a3d,#e5442c); color:#fff; font-size:13px; font-weight:800; cursor:pointer; box-shadow:0 3px 12px rgba(200,54,20,.4);">도장 적립</button>' +
+      (state.mfEditIdx != null
+        ? '<button data-action="deleteStamp" style="flex:1; padding:13px; border-radius:11px; border:1px solid rgba(230,80,60,.45); background:rgba(200,50,30,.14); color:#ff9a7a; font-size:13px; font-weight:700; cursor:pointer;">삭제</button>'
+        : '<button data-action="closeModal" style="flex:1; padding:13px; border-radius:11px; border:1px solid rgba(255,120,60,.2); background:rgba(255,255,255,.03); color:rgba(240,225,210,.8); font-size:13px; font-weight:700; cursor:pointer;">취소</button>') +
+      '<button data-action="submitStamp" style="flex:2; padding:13px; border-radius:11px; border:none; background:linear-gradient(155deg,#ff7a3d,#e5442c); color:#fff; font-size:13px; font-weight:800; cursor:pointer; box-shadow:0 3px 12px rgba(200,54,20,.4);">' + (state.mfEditIdx != null ? '수정 완료' : '도장 적립') + '</button>' +
       '</div>' +
       '</div>' +
       '</div>';
@@ -740,8 +788,13 @@
 
   document.addEventListener('click', function (e) {
     var target = closestAction(e.target);
+    var action = target ? target.getAttribute('data-action') : null;
+    // 도장판 ⋮ 메뉴가 열려 있고, 메뉴 관련 클릭이 아니면 닫는다
+    if (state.openMenuBoardId != null && action !== 'toggleBoardMenu' && action !== 'deleteBoard') {
+      state.openMenuBoardId = null;
+      if (!target) { render(); return; }
+    }
     if (!target) return;
-    var action = target.getAttribute('data-action');
     switch (action) {
       case 'setTab': setTab(target.getAttribute('data-tab')); break;
       case 'setActor': setActor(target.getAttribute('data-name')); break;
@@ -759,6 +812,8 @@
       case 'resetData': resetData(); break;
       case 'addBoard': addBoard(); break;
       case 'openBoard': openBoard(parseInt(target.getAttribute('data-id'), 10)); break;
+      case 'toggleBoardMenu': e.stopPropagation(); toggleBoardMenu(parseInt(target.getAttribute('data-id'), 10)); break;
+      case 'deleteBoard': e.stopPropagation(); deleteBoard(parseInt(target.getAttribute('data-id'), 10)); break;
       case 'closeBoard': closeBoard(); break;
       case 'tapStamp': {
         var boardId = parseInt(target.getAttribute('data-board-id'), 10);
@@ -769,10 +824,12 @@
         break;
       }
       case 'claimTier': claimTier(parseInt(target.getAttribute('data-board-id'), 10), parseInt(target.getAttribute('data-count'), 10)); break;
+      case 'selectStampActor': selectStampActor(target.getAttribute('data-name')); break;
       case 'closeModal': closeModal(); break;
       case 'closeModalBackdrop': closeModal(); break;
       case 'stopProp': e.stopPropagation(); break;
       case 'submitStamp': submitStamp(); break;
+      case 'deleteStamp': deleteStamp(); break;
     }
   });
 
@@ -781,9 +838,6 @@
     if (!action) return;
     switch (action) {
       case 'mfDate': state.mfDate = e.target.value; break;
-      case 'mfJungwon': state.mfJungwon = e.target.value; break;
-      case 'mfYijun': state.mfYijun = e.target.value; break;
-      case 'mfSeat': state.mfSeat = e.target.value; break;
       default: return;
     }
   });
