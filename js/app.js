@@ -187,13 +187,13 @@
       { row: 'B', pad: 1, left: rng(1, 10), right: rng(11, 19) },
       { row: 'C', pad: 1, left: rng(1, 10), right: rng(11, 20) },
       { row: 'D', pad: 1, left: rng(1, 10), right: rng(11, 19) },
-      { row: 'E', pad: 2, left: rng(1, 7), right: rng(8, 17), entrance: true, gap: true },
-      { row: 'F', pad: 3, left: rng(1, 7), right: rng(8, 17) },
-      { row: 'G', pad: 4, left: rng(1, 7), right: rng(8, 17) },
-      { row: 'H', pad: 1, left: rng(1, 9), right: rng(10, 19) },
-      { row: 'I', pad: 1, left: rng(1, 9), right: rng(10, 19) },
-      { row: 'J', pad: 0, left: [1, 2, 'g', 3, 4, 5, 6, 7, 8, 9], right: rng(10, 19) },
-      { row: 'K', pad: 0, left: [1, 2, 'g', 3, 4, 5, 6, 7, 8, 9], right: rng(10, 18) },
+      { row: 'E', pad: 0, alignRight: true, left: rng(1, 7), right: rng(8, 17), entrance: true, gap: true },
+      { row: 'F', pad: 0, alignRight: true, left: rng(1, 7), right: rng(8, 17) },
+      { row: 'G', pad: 0, alignRight: true, left: rng(1, 7), right: rng(8, 17) },
+      { row: 'H', pad: 0, alignRight: true, left: rng(1, 9), right: rng(10, 19) },
+      { row: 'I', pad: 0, alignRight: true, left: rng(1, 9), right: rng(10, 19) },
+      { row: 'J', pad: 0, alignRight: true, left: [1, 2, 'g', 3, 4, 5, 6, 7, 8, 9], right: rng(10, 19) },
+      { row: 'K', pad: 0, alignRight: true, left: [1, 2, 'g', 3, 4, 5, 6, 7, 8, 9], right: rng(10, 18) },
       { row: 'L', center: rng(1, 7), gap: true }
     ];
     function mkSeat(row, num) {
@@ -211,7 +211,7 @@
       d.left.forEach(function (x) { leftItems.push(x === 'g' ? spacer() : mkSeat(d.row, x)); });
       return {
         isL: false, notL: true, letter: d.row, entrance: !!d.entrance,
-        topGap: d.gap ? '10px' : '0px',
+        topGap: d.gap ? '10px' : '0px', alignRight: !!d.alignRight,
         leftItems: leftItems, rightItems: d.right.map(function (n) { return mkSeat(d.row, n); })
       };
     });
@@ -427,15 +427,17 @@
       counts[p.jungwon] = (counts[p.jungwon] || 0) + 1;
       counts[p.yijun] = (counts[p.yijun] || 0) + 1;
     });
+    // 배우별 정산은 스케줄 탭 관람 체크(state.watched)에서 집계
     var watchedByActorStamps = {};
-    var totalStampCount = 0;
-    state.boards.forEach(function (b) {
-      b.stamps.forEach(function (s) {
-        totalStampCount++;
-        if (s.jungwon) watchedByActorStamps[s.jungwon] = (watchedByActorStamps[s.jungwon] || 0) + 1;
-        if (s.yijun) watchedByActorStamps[s.yijun] = (watchedByActorStamps[s.yijun] || 0) + 1;
-      });
+    SHOW.performances.forEach(function (p) {
+      if (state.watched[perfId(p)]) {
+        watchedByActorStamps[p.jungwon] = (watchedByActorStamps[p.jungwon] || 0) + 1;
+        watchedByActorStamps[p.yijun] = (watchedByActorStamps[p.yijun] || 0) + 1;
+      }
     });
+    // 상단 "누적 도장" 표시는 출동기록 도장판 합계 유지
+    var totalStampCount = 0;
+    state.boards.forEach(function (b) { totalStampCount += b.stamps.length; });
 
     function seatTile(c) {
       if (c.isSpacer) return '<div style="width:15px; height:15px; flex:0 0 auto;"></div>';
@@ -455,7 +457,7 @@
       var entranceHtml = r.entrance ? '<div style="position:absolute; left:0; top:50%; transform:translateY(-50%); width:30px; text-align:center; font-size:7.5px; letter-spacing:.5px; color:rgba(232,205,190,.5); z-index:2;">출입구</div>' : '';
       return '<div style="position:relative; display:flex; align-items:center; gap:5px; margin-top:' + r.topGap + ';">' +
         entranceHtml +
-        '<div style="display:flex; gap:2px; width:185px; justify-content:flex-start; flex:0 0 auto;">' + r.leftItems.map(seatTile).join('') + '</div>' +
+        '<div style="display:flex; gap:2px; width:185px; justify-content:' + (r.alignRight ? 'flex-end' : 'flex-start') + '; flex:0 0 auto;">' + r.leftItems.map(seatTile).join('') + '</div>' +
         '<div style="width:16px; flex:0 0 auto; text-align:center; font-family:\'Cinzel\',serif; font-size:11px; font-weight:600; color:rgba(240,220,200,.75);">' + esc(r.letter) + '</div>' +
         '<div style="display:flex; gap:2px; flex:0 0 auto;">' + r.rightItems.map(seatTile).join('') + '</div>' +
         '</div>';
