@@ -145,14 +145,32 @@
   }
   function saveNodeAsJpeg(nodeId, filename) {
     var node = document.getElementById(nodeId);
-    if (!node || typeof html2canvas === 'undefined') { showToast('이미지 저장을 사용할 수 없어요'); return; }
+    if (!node) { showToast('저장할 영역을 찾지 못했어요'); return; }
+    if (typeof html2canvas === 'undefined') { showToast('이미지 모듈을 불러오지 못했어요. 새로고침 후 다시 시도해주세요'); return; }
     showToast('이미지를 만드는 중…');
-    html2canvas(node, { backgroundColor: '#080504', scale: 2, useCORS: true }).then(function (canvas) {
-      var url = canvas.toDataURL('image/jpeg', 0.92);
-      var a = document.createElement('a');
-      a.href = url; a.download = filename; a.click();
-      showToast('이미지를 저장했어요');
-    }).catch(function () { showToast('이미지 저장에 실패했어요'); });
+    var errMsg = function (e) { return e && e.message ? e.message : String(e); };
+    var run = function () {
+      html2canvas(node, {
+        backgroundColor: '#080504',
+        scale: 2,
+        useCORS: true,
+        allowTaint: false,
+        logging: false,
+        imageTimeout: 8000
+      }).then(function (canvas) {
+        var url;
+        try { url = canvas.toDataURL('image/jpeg', 0.92); }
+        catch (e) { showToast('이미지 변환 실패: ' + errMsg(e)); return; }
+        var a = document.createElement('a');
+        a.href = url; a.download = filename;
+        document.body.appendChild(a); a.click(); document.body.removeChild(a);
+        showToast('이미지를 저장했어요');
+      }).catch(function (e) { showToast('이미지 저장 실패: ' + errMsg(e)); });
+    };
+    // 웹폰트가 준비된 뒤 캡처해야 글자 레이아웃이 정확함
+    if (document.fonts && document.fonts.ready && document.fonts.ready.then) {
+      document.fonts.ready.then(run, run);
+    } else { run(); }
   }
   function saveImage() { saveNodeAsJpeg('settle-capture', '사칠-정산.jpg'); }
   function saveStampImage() { saveNodeAsJpeg('stamp-capture', '사칠-적립.jpg'); }
