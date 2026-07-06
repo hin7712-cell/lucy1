@@ -593,6 +593,14 @@
       var stat = boardStatus(b);
       var pct = Math.min(100, Math.round(count / STAMP_GOAL * 100));
       var boardNo = idx + 1;
+      var listBadges = SHOW.tiers.map(function (t) {
+        var claimed = !!b.claims[t.count];
+        return '<span style="display:inline-flex; align-items:center; padding:2px 9px; border-radius:7px; font-size:10px; font-weight:800; ' +
+          (claimed
+            ? 'color:#fff; background:linear-gradient(155deg,#ff9d5c,#e5442c); border:1px solid #ffab5e; box-shadow:0 0 8px rgba(255,120,45,.55);'
+            : 'color:rgba(255,180,130,.45); background:rgba(255,120,60,.05); border:1px solid rgba(255,120,60,.16);') +
+          '">' + t.count + '회</span>';
+      }).join('');
       var menuOpen = state.openMenuBoardId === b.id;
       var menuHtml = '<button data-action="toggleBoardMenu" data-id="' + b.id + '" aria-label="도장판 메뉴" style="position:absolute; top:8px; right:8px; width:28px; height:28px; display:flex; align-items:center; justify-content:center; border-radius:8px; border:none; background:rgba(255,255,255,.05); color:#f0e4d4; font-size:16px; line-height:1; cursor:pointer; z-index:2;">⋮</button>' +
         (menuOpen ? '<div style="position:absolute; top:40px; right:8px; z-index:3; background:#20120c; border:1px solid rgba(255,120,60,.28); border-radius:11px; overflow:hidden; box-shadow:0 8px 22px rgba(0,0,0,.55);">' +
@@ -610,7 +618,7 @@
         '<div style="height:100%; width:' + pct + '%; border-radius:4px; background:linear-gradient(90deg,#ff8a3d,#e5442c);"></div>' +
         '</div>' +
         '</div>' +
-        '<div style="font-size:10.5px; font-weight:700; margin-top:8px; color:' + stat.color + ';">' + stat.icon + ' ' + stat.status + '</div>' +
+        '<div style="display:flex; gap:5px; margin-top:9px;">' + listBadges + '</div>' +
         '</div>' +
         '</div>';
     }).join('');
@@ -692,6 +700,15 @@
         '</div>';
     }).join('');
 
+    var tierBadges = SHOW.tiers.map(function (t) {
+      var claimed = !!board.claims[t.count];
+      return '<span style="display:inline-flex; align-items:center; padding:3px 10px; border-radius:8px; font-size:11px; font-weight:800; ' +
+        (claimed
+          ? 'color:#fff; background:linear-gradient(155deg,#ff9d5c,#e5442c); border:1px solid #ffab5e; box-shadow:0 0 9px rgba(255,120,45,.6);'
+          : 'color:rgba(255,180,130,.45); background:rgba(255,120,60,.05); border:1px solid rgba(255,120,60,.16);') +
+        '">' + t.count + '회</span>';
+    }).join('');
+
     return '<div style="display:flex; align-items:center; gap:10px; margin:2px 0 16px;">' +
       '<button data-action="closeBoard" style="flex:0 0 auto; width:34px; height:34px; display:flex; align-items:center; justify-content:center; border-radius:10px; border:1px solid rgba(255,120,60,.16); background:rgba(255,255,255,.02); color:#f0e4d4; cursor:pointer;">' +
       '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>' +
@@ -709,7 +726,7 @@
       '</div>' +
       '<div style="text-align:right;">' +
       '<div style="font-size:22px; font-weight:800; color:#ffb877; line-height:1;">🎫 ' + count + '<span style="color:rgba(232,205,190,.4); font-size:15px;">/' + STAMP_GOAL + '</span></div>' +
-      '<div style="font-size:10px; margin-top:4px; font-weight:700; color:' + stat.color + ';">' + stat.icon + ' ' + stat.status + '</div>' +
+      '<div style="display:flex; gap:5px; justify-content:flex-end; margin-top:7px;">' + tierBadges + '</div>' +
       '</div>' +
       '</div>' +
       '<div style="height:9px; border-radius:5px; background:rgba(255,255,255,.06); overflow:hidden; margin-top:14px;">' +
