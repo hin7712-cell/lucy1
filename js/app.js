@@ -143,6 +143,19 @@
     URL.revokeObjectURL(url);
     showToast('데이터를 저장했어요');
   }
+  function saveNodeAsJpeg(nodeId, filename) {
+    var node = document.getElementById(nodeId);
+    if (!node || typeof html2canvas === 'undefined') { showToast('이미지 저장을 사용할 수 없어요'); return; }
+    showToast('이미지를 만드는 중…');
+    html2canvas(node, { backgroundColor: '#080504', scale: 2, useCORS: true }).then(function (canvas) {
+      var url = canvas.toDataURL('image/jpeg', 0.92);
+      var a = document.createElement('a');
+      a.href = url; a.download = filename; a.click();
+      showToast('이미지를 저장했어요');
+    }).catch(function () { showToast('이미지 저장에 실패했어요'); });
+  }
+  function saveImage() { saveNodeAsJpeg('settle-capture', '사칠-정산.jpg'); }
+  function saveStampImage() { saveNodeAsJpeg('stamp-capture', '사칠-적립.jpg'); }
   function triggerImport() { var el = document.getElementById('sachil-import'); if (el) el.click(); }
   function importData(e) {
     var f = e.target.files && e.target.files[0];
@@ -524,6 +537,7 @@
     }).join('');
 
     return '<section>' +
+      '<div id="settle-capture" style="padding-bottom:2px;">' +
       '<div style="display:flex; align-items:baseline; justify-content:flex-end; margin:6px 4px 16px;">' +
       '<span style="font-size:10.5px; color:rgba(232,205,190,.42);">기록된 좌석 ' + loggedSeatCount + ' · 누적 도장 ' + totalStampCount + '회</span>' +
       '</div>' +
@@ -543,9 +557,10 @@
       '<h3 style="margin:0 4px 10px; font-size:13px; font-weight:700; color:#f0e4d4; letter-spacing:.4px;">배우별 정산</h3>' +
       '<div style="display:flex; flex-direction:column; gap:14px;">' + actorGroupsHtml + '</div>' +
       '</div>' +
+      '</div>' +
       '<div style="margin-top:20px; display:flex; gap:8px;">' +
       '<button data-action="exportData" style="flex:1; padding:12px; border-radius:11px; border:1px solid rgba(255,120,60,.2); background:rgba(255,255,255,.03); color:#f0e4d4; font-size:12px; font-weight:600; cursor:pointer;">💾 데이터 저장</button>' +
-      '<button data-action="triggerImport" style="flex:1; padding:12px; border-radius:11px; border:1px solid rgba(255,120,60,.2); background:rgba(255,255,255,.03); color:#f0e4d4; font-size:12px; font-weight:600; cursor:pointer;">📂 불러오기</button>' +
+      '<button data-action="saveImage" style="flex:1; padding:12px; border-radius:11px; border:1px solid rgba(255,120,60,.2); background:rgba(255,255,255,.03); color:#f0e4d4; font-size:12px; font-weight:600; cursor:pointer;">🖼️ 이미지 저장</button>' +
       '</div>' +
       '<button data-action="resetData" style="width:100%; margin-top:8px; padding:9px; border-radius:10px; border:none; background:none; color:rgba(232,205,190,.4); font-size:10.5px; cursor:pointer;">기록 초기화</button>' +
       '</section>';
@@ -683,9 +698,15 @@
       '<div style="margin-top:20px;">' +
       '<div style="display:flex; align-items:center; justify-content:space-between; margin:0 4px 12px;">' +
       '<h3 style="margin:0; font-size:14px; font-weight:800; color:#f0e4d4;">적립</h3>' +
-      '<span style="font-size:10px; color:rgba(232,205,190,.42);">도장을 눌러 회차를 기록하세요</span>' +
+      '<button data-action="saveStampImage" style="display:flex; align-items:center; gap:5px; padding:7px 11px; border-radius:9px; border:1px solid rgba(255,140,70,.35); background:linear-gradient(155deg,rgba(255,120,55,.16),rgba(200,54,20,.18)); color:#ffcaa0; font-size:10.5px; font-weight:700; cursor:pointer;">🖼️ 이미지로 저장</button>' +
+      '</div>' +
+      '<div id="stamp-capture" style="padding:16px 14px 6px; border-radius:14px; background:radial-gradient(120% 80% at 20% 0%, rgba(180,45,20,.18), rgba(20,10,7,0) 60%), rgba(14,8,6,.5);">' +
+      '<div style="display:flex; align-items:baseline; justify-content:space-between; margin:0 2px 15px;">' +
+      '<span style="font-family:\'Nanum Myeongjo\',serif; font-size:14px; font-weight:800; color:#ecdfce;">사칠 관람 적립</span>' +
+      '<span style="font-size:12px; font-weight:800; color:#ffb877;">🎫 ' + count + '<span style="color:rgba(232,205,190,.4); font-size:10px;">/' + STAMP_GOAL + '</span></span>' +
       '</div>' +
       '<div style="display:grid; grid-template-columns:repeat(4,1fr); gap:14px 8px;">' + stampsHtml + '</div>' +
+      '</div>' +
       '</div>' +
       '<div style="margin-top:24px;">' +
       '<h3 style="margin:0 4px 12px; font-size:14px; font-weight:800; color:#f0e4d4;">혜택</h3>' +
@@ -808,6 +829,8 @@
       }
       case 'seatTap': seatTap(target.getAttribute('data-code'), parseInt(target.getAttribute('data-count'), 10) || 0); break;
       case 'exportData': exportData(); break;
+      case 'saveImage': saveImage(); break;
+      case 'saveStampImage': saveStampImage(); break;
       case 'triggerImport': triggerImport(); break;
       case 'resetData': resetData(); break;
       case 'addBoard': addBoard(); break;
