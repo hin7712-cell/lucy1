@@ -144,12 +144,15 @@
     showToast('데이터를 저장했어요');
   }
   function saveNodeAsJpeg(nodeId, filename) {
-    var node = document.getElementById(nodeId);
-    if (!node) { showToast('저장할 영역을 찾지 못했어요'); return; }
     if (typeof html2canvas === 'undefined') { showToast('이미지 모듈을 불러오지 못했어요. 새로고침 후 다시 시도해주세요'); return; }
+    if (!document.getElementById(nodeId)) { showToast('저장할 영역을 찾지 못했어요'); return; }
     showToast('이미지를 만드는 중…');
     var errMsg = function (e) { return e && e.message ? e.message : String(e); };
     var run = function () {
+      // showToast가 render()로 #app을 다시 그리므로, 재렌더 이후 최신 노드를 다시 조회해야
+      // 분리된(detached) 노드를 캡처하다 "Unable to find element in cloned iframe"가 나는 것을 막는다.
+      var node = document.getElementById(nodeId);
+      if (!node) { showToast('저장할 영역을 찾지 못했어요'); return; }
       html2canvas(node, {
         backgroundColor: '#080504',
         scale: 2,
